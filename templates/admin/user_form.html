@@ -1,0 +1,67 @@
+{% extends "admin/layout.html" %}
+{% block title %}{% if mode == 'create' %}New User{% else %}Edit User{% endif %} — Admin — Standup 3000{% endblock %}
+{% block admin_content %}
+<h2>{% if mode == 'create' %}New User{% else %}Edit {{ edit_user.display_name }}{% endif %}</h2>
+
+<form method="post" style="max-width:500px;">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    {% if mode == 'create' %}
+    <label for="username">Username</label>
+    <input type="text" id="username" name="username" required autocomplete="off">
+    {% else %}
+    <label>Username</label>
+    <input type="text" value="{{ edit_user.username }}" disabled style="opacity:0.5;">
+    {% endif %}
+
+    <label for="display_name">Display Name</label>
+    <input type="text" id="display_name" name="display_name"
+           value="{{ edit_user.display_name if mode == 'edit' else '' }}" required>
+
+    <label for="email">Email (optional)</label>
+    <input type="email" id="email" name="email"
+           value="{{ edit_user.email or '' if mode == 'edit' else '' }}">
+
+    <label for="role">Role</label>
+    <select id="role" name="role">
+        <option value="member" {% if mode == 'edit' and edit_user.role == 'member' %}selected{% endif %}>Member</option>
+        <option value="admin" {% if mode == 'edit' and edit_user.role == 'admin' %}selected{% endif %}>Admin</option>
+    </select>
+
+    {% if mode == 'create' %}
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" required minlength="8"
+           placeholder="Minimum 8 characters">
+    {% endif %}
+
+    {% if mode == 'edit' %}
+    <label>
+        <input type="checkbox" name="is_active" value="1"
+               {% if edit_user.is_active %}checked{% endif %}>
+        Active
+    </label>
+    {% endif %}
+
+    <div style="display:flex; gap:0.5rem; margin-top:1rem; align-items:center;">
+        <button type="submit">{% if mode == 'create' %}Create User{% else %}Save Changes{% endif %}</button>
+        <a href="{{ url_for('admin.users_list') }}" role="button" class="outline secondary">Cancel</a>
+    </div>
+</form>
+
+{% if mode == 'edit' %}
+<hr style="margin:2rem 0;">
+<h3>Reset Password</h3>
+{% if temp_password %}
+<div style="border:1px solid var(--accent-amber); border-radius:8px; padding:1rem; margin-bottom:1rem; background:rgba(245,158,11,0.08);">
+    <strong>Temporary password (shown once):</strong>
+    <code style="display:block; margin-top:0.5rem; padding:0.5rem; background:var(--glass-bg); border-radius:4px; font-size:1.1rem; user-select:all;">{{ temp_password }}</code>
+    <p style="opacity:0.5; font-size:0.8rem; margin:0.5rem 0 0 0;">Copy this now — it will not be shown again after you navigate away.</p>
+</div>
+{% endif %}
+<form method="post" action="{{ url_for('admin.user_reset_password', user_id=edit_user.id) }}" style="max-width:500px;">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <p style="opacity:0.6; font-size:0.9rem;">Generate a temporary password. The user will be prompted to change it on next login.</p>
+    <button type="submit" class="outline secondary">Reset Password</button>
+</form>
+{% endif %}
+{% endblock %}

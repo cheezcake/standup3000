@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+{% block title %}Analytics — Standup 3000{% endblock %}
+{% block content %}
+<style>
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .kpi-card {
+        border: 1px solid var(--pico-muted-border-color);
+        border-radius: 12px;
+        padding: 1.25rem;
+        text-align: center;
+        transition: box-shadow 0.2s;
+    }
+    .kpi-card:hover { box-shadow: 0 4px 16px var(--accent-glow); }
+    .kpi-value {
+        font-size: 2rem;
+        font-weight: 800;
+        background: var(--gradient-primary);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    .kpi-label { font-size: 0.8rem; opacity: 0.5; margin-top: 0.25rem; }
+    .kpi-sub { font-size: 0.75rem; opacity: 0.4; margin-top: 0.15rem; }
+    .kpi-sub .up { color: var(--accent-green); }
+    .kpi-sub .down { color: var(--accent-red); }
+    .kpi-sub .overdue { color: var(--accent-red); font-weight: 600; }
+
+    .chart-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    @media (max-width: 900px) {
+        .chart-grid { grid-template-columns: 1fr; }
+    }
+    .chart-panel {
+        border: 1px solid var(--pico-muted-border-color);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+    }
+    .chart-panel h4 {
+        margin: 0 0 0.75rem 0;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+    .chart-panel canvas { max-height: 300px; }
+
+    .heatmap-table {
+        width: 100%;
+        font-size: 0.7rem;
+        border-collapse: collapse;
+    }
+    .heatmap-table th, .heatmap-table td {
+        padding: 0.2rem 0.3rem;
+        text-align: center;
+    }
+    .heatmap-table th { font-weight: 600; opacity: 0.5; }
+    .heatmap-cell {
+        width: 1.2rem;
+        height: 1.2rem;
+        border-radius: 3px;
+        display: inline-block;
+    }
+    .heatmap-cell.filled { background: var(--accent-green); opacity: 0.7; }
+    .heatmap-cell.empty { background: var(--accent-red); opacity: 0.4; }
+    .heatmap-cell.missing { background: var(--pico-muted-border-color); opacity: 0.2; }
+
+    .stale-table {
+        width: 100%;
+        font-size: 0.8rem;
+    }
+    .stale-table th {
+        font-weight: 600;
+        text-align: left;
+        padding: 0.3rem 0.5rem;
+        opacity: 0.5;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .stale-table td { padding: 0.3rem 0.5rem; }
+    .stale-table .very-stale { color: var(--accent-red); }
+
+    .activity-item {
+        display: flex;
+        gap: 0.5rem;
+        padding: 0.3rem 0;
+        font-size: 0.8rem;
+        align-items: baseline;
+    }
+    .activity-type {
+        font-size: 0.65rem;
+        padding: 0.1rem 0.3rem;
+        border-radius: 1rem;
+        white-space: nowrap;
+    }
+    .activity-type.section_edit { background: rgba(99,102,241,0.12); color: #818cf8; }
+    .activity-type.todo_created { background: rgba(34,197,94,0.12); color: var(--accent-green); }
+    .activity-type.todo_completed { background: rgba(59,130,246,0.12); color: var(--accent-blue); }
+
+    .auto-refresh-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.75rem;
+        opacity: 0.5;
+    }
+</style>
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+    <h2 style="margin:0;">Mission Control</h2>
+    <label class="auto-refresh-toggle">
+        <input type="checkbox" id="auto-refresh" style="margin:0; width:1rem; height:1rem;">
+        Auto-refresh
+    </label>
+</div>
+
+<!-- KPI Cards -->
+<div class="kpi-grid" id="kpi-grid">
+    <div class="kpi-card"><div class="kpi-value" id="kpi-meetings">--</div><div class="kpi-label">Total Meetings</div><div class="kpi-sub" id="kpi-meetings-sub"></div></div>
+    <div class="kpi-card"><div class="kpi-value" id="kpi-fill">--</div><div class="kpi-label">Fill Rate</div><div class="kpi-sub" id="kpi-fill-sub"></div></div>
+    <div class="kpi-card"><div class="kpi-value" id="kpi-todos">--</div><div class="kpi-label">Open Items</div><div class="kpi-sub" id="kpi-todos-sub"></div></div>
+    <div class="kpi-card"><div class="kpi-value" id="kpi-close">--</div><div class="kpi-label">Avg Close Time</div><div class="kpi-sub" id="kpi-close-sub">days</div></div>
+</div>
+
+<!-- Charts Row -->
+<div class="chart-grid">
+    <div class="chart-panel">
+        <h4>Fill Rate Over Time</h4>
+        <canvas id="fillRateChart"></canvas>
+    </div>
+    <div class="chart-panel">
+        <h4>Action Item Velocity</h4>
+        <canvas id="velocityChart"></canvas>
+    </div>
+</div>
+
+<!-- Heatmap + By Assignee -->
+<div class="chart-grid">
+    <div class="chart-panel">
+        <h4>Section Fill Heatmap</h4>
+        <div id="heatmap-container" style="overflow-x:auto;"></div>
+    </div>
+    <div class="chart-panel">
+        <h4>Items by Assignee</h4>
+        <canvas id="assigneeChart"></canvas>
+    </div>
+</div>
+
+<!-- Stale + Activity -->
+<div class="chart-grid">
+    <div class="chart-panel">
+        <h4>Stale Items (>14 days)</h4>
+        <div id="stale-container" style="max-height:300px; overflow-y:auto;"></div>
+    </div>
+    <div class="chart-panel">
+        <h4>Recent Activity</h4>
+        <div id="activity-container" style="max-height:300px; overflow-y:auto;"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+const textColor = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)';
+
+Chart.defaults.color = textColor;
+Chart.defaults.borderColor = gridColor;
+
+let fillChart, velocityChart, assigneeChart;
+
+function fetchJSON(url) {
+    return fetch(url, {headers: {'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content}})
+        .then(r => r.json());
+}
+
+function esc(str) {
+    const el = document.createElement('span');
+    el.textContent = str;
+    return el.innerHTML;
+}
+
+function loadKPIs() {
+    fetchJSON('/api/analytics/kpis').then(d => {
+        document.getElementById('kpi-meetings').textContent = d.total_meetings;
+        document.getElementById('kpi-meetings-sub').textContent = '+' + d.meetings_this_month + ' this month';
+        document.getElementById('kpi-fill').textContent = d.fill_rate + '%';
+        const trend = d.fill_rate_trend;
+        const fillSub = document.getElementById('kpi-fill-sub');
+        fillSub.textContent = '';
+        if (trend === 'up') { const s = document.createElement('span'); s.className = 'up'; s.textContent = '\u25B2'; fillSub.appendChild(s); }
+        else if (trend === 'down') { const s = document.createElement('span'); s.className = 'down'; s.textContent = '\u25BC'; fillSub.appendChild(s); }
+        else { fillSub.textContent = '--'; }
+        document.getElementById('kpi-todos').textContent = d.open_todos;
+        const todosSub = document.getElementById('kpi-todos-sub');
+        todosSub.textContent = '';
+        if (d.overdue_todos > 0) { const s = document.createElement('span'); s.className = 'overdue'; s.textContent = d.overdue_todos + ' overdue'; todosSub.appendChild(s); }
+        else { todosSub.textContent = 'none overdue'; }
+        document.getElementById('kpi-close').textContent = d.avg_close_days !== null ? d.avg_close_days : '--';
+    });
+}
+
+function loadFillRate() {
+    fetchJSON('/api/analytics/fill-rate').then(data => {
+        const ctx = document.getElementById('fillRateChart').getContext('2d');
+        if (fillChart) fillChart.destroy();
+        fillChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map(d => d.date),
+                datasets: [{
+                    label: 'Regular Sections',
+                    data: data.map(d => d.regular_pct),
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99,102,241,0.1)',
+                    fill: true,
+                    tension: 0.3
+                }, {
+                    label: 'All Sections',
+                    data: data.map(d => d.fill_pct),
+                    borderColor: '#a855f7',
+                    backgroundColor: 'rgba(168,85,247,0.05)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+                scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } }
+            }
+        });
+    });
+}
+
+function loadVelocity() {
+    fetchJSON('/api/analytics/velocity').then(data => {
+        const ctx = document.getElementById('velocityChart').getContext('2d');
+        if (velocityChart) velocityChart.destroy();
+        velocityChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map((_, i) => 'W' + (data.length - i)),
+                datasets: [{
+                    label: 'Created',
+                    data: data.map(d => d.created),
+                    backgroundColor: 'rgba(99,102,241,0.6)'
+                }, {
+                    label: 'Completed',
+                    data: data.map(d => d.completed),
+                    backgroundColor: 'rgba(34,197,94,0.6)'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    });
+}
+
+function loadHeatmap() {
+    fetchJSON('/api/analytics/heatmap').then(data => {
+        const container = document.getElementById('heatmap-container');
+        if (!data.meetings.length) { container.innerHTML = '<p style="opacity:0.5;font-size:0.8rem;">No data yet.</p>'; return; }
+        let html = '<table class="heatmap-table"><thead><tr><th></th>';
+        data.meetings.forEach(m => { html += '<th>' + esc(m.slice(5)) + '</th>'; });
+        html += '</tr></thead><tbody>';
+        data.departments.forEach(dept => {
+            const statusMap = {'filled':'filled','empty':'empty','missing':'missing'};
+            html += '<tr><td style="text-align:left;white-space:nowrap;">' + esc(dept.department) + '</td>';
+            dept.cells.forEach(c => {
+                const cls = statusMap[c.status] || 'missing';
+                html += '<td><span class="heatmap-cell ' + cls + '" title="' + esc(c.date) + ': ' + cls + '"></span></td>';
+            });
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    });
+}
+
+function loadByAssignee() {
+    fetchJSON('/api/analytics/by-assignee').then(data => {
+        const ctx = document.getElementById('assigneeChart').getContext('2d');
+        if (assigneeChart) assigneeChart.destroy();
+        assigneeChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(d => d.name || 'Unassigned'),
+                datasets: [{
+                    label: 'High',
+                    data: data.map(d => d.high),
+                    backgroundColor: 'rgba(239,68,68,0.7)'
+                }, {
+                    label: 'Normal',
+                    data: data.map(d => d.normal),
+                    backgroundColor: 'rgba(99,102,241,0.6)'
+                }, {
+                    label: 'Low',
+                    data: data.map(d => d.low),
+                    backgroundColor: 'rgba(148,163,184,0.4)'
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+                scales: { x: { stacked: true, beginAtZero: true }, y: { stacked: true } }
+            }
+        });
+    });
+}
+
+function loadStale() {
+    fetchJSON('/api/analytics/stale').then(data => {
+        const container = document.getElementById('stale-container');
+        if (!data.length) { container.innerHTML = '<p style="opacity:0.5;font-size:0.8rem;">No stale items. Nice!</p>'; return; }
+        let html = '<table class="stale-table"><thead><tr><th>Item</th><th>Assignee</th><th>Section</th><th>Age</th></tr></thead><tbody>';
+        data.forEach(d => {
+            const cls = d.age_days > 30 ? 'very-stale' : '';
+            const txt = d.text.length > 40 ? d.text.slice(0,40) + '...' : d.text;
+            html += '<tr class="' + cls + '"><td>' + esc(txt) + '</td>';
+            html += '<td>' + esc(d.assignee_name || '--') + '</td>';
+            html += '<td>' + esc(d.section_name) + '</td>';
+            html += '<td>' + Number(d.age_days) + 'd</td></tr>';
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    });
+}
+
+function loadActivity() {
+    fetchJSON('/api/analytics/activity').then(data => {
+        const container = document.getElementById('activity-container');
+        if (!data.length) { container.innerHTML = '<p style="opacity:0.5;font-size:0.8rem;">No activity yet.</p>'; return; }
+        let html = '';
+        const validTypes = {'section_edit':1,'todo_created':1,'todo_completed':1};
+        data.forEach(d => {
+            const typeCls = validTypes[d.type] ? d.type : '';
+            html += '<div class="activity-item">';
+            html += '<span class="activity-type ' + typeCls + '">' + esc(d.type.replace('_', ' ')) + '</span>';
+            html += '<span>' + esc(d.text) + '</span>';
+            html += '<span style="opacity:0.4;font-size:0.7rem;white-space:nowrap;">' + esc(d.actor) + '</span>';
+            html += '</div>';
+        });
+        container.innerHTML = html;
+    });
+}
+
+function loadAll() {
+    loadKPIs();
+    loadFillRate();
+    loadVelocity();
+    loadHeatmap();
+    loadByAssignee();
+    loadStale();
+    loadActivity();
+}
+
+loadAll();
+
+// Auto-refresh
+let refreshInterval = null;
+document.getElementById('auto-refresh').addEventListener('change', function() {
+    if (this.checked) {
+        refreshInterval = setInterval(loadAll, 60000);
+    } else {
+        clearInterval(refreshInterval);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,33 @@
+<div class="todo-list" id="todos-{{ section.id }}">
+    {% set open_count = todos|rejectattr('done')|list|length %}
+    <div class="todo-list-label">Action Items{% if open_count %} <span class="todo-count">{{ open_count }}</span>{% endif %}</div>
+    {% for todo in todos %}
+        {% include "partials/todo_item.html" %}
+    {% endfor %}
+    {% if not locked %}
+    <form class="todo-add"
+          hx-post="{{ url_for('todo_add', section_id=section.id) }}"
+          hx-target="#todos-{{ section.id }}"
+          hx-swap="outerHTML">
+        <div class="todo-add-row">
+            <input type="text" name="text" placeholder="Add action item..." autocomplete="off">
+        </div>
+        <div class="todo-add-extras" style="display:none;">
+            <select name="assigned_to" class="todo-field">
+                <option value="">Unassigned</option>
+                {% if users is defined %}
+                {% for u in users %}
+                <option value="{{ u.id }}">{{ u.display_name }}</option>
+                {% endfor %}
+                {% endif %}
+            </select>
+            <input type="date" name="due_date" class="todo-field" title="Due date">
+            <select name="priority" class="todo-field">
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="low">Low</option>
+            </select>
+        </div>
+    </form>
+    {% endif %}
+</div>

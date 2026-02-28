@@ -1,0 +1,32 @@
+{% extends "admin/layout.html" %}
+{% block title %}Users — Admin — Standup 3000{% endblock %}
+{% block admin_content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+    <h2 style="margin:0;">Users</h2>
+    <a href="{{ url_for('admin.user_create') }}" role="button" class="outline" style="font-size:0.85rem; padding:0.4rem 1rem; border-radius:8px;">+ New User</a>
+</div>
+
+<div>
+    {% for user in users %}
+    <div class="meeting-list-item">
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+            <span style="display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:8px; background:var(--gradient-primary); color:white; font-weight:700; font-size:0.8rem;">{{ user.display_name[:2]|upper }}</span>
+            <div>
+                <strong>{{ user.display_name }}</strong>
+                <span style="opacity:0.4; font-size:0.85rem;">@{{ user.username }}</span>
+                {% if not user.is_active %}
+                <span style="color:var(--accent-red); font-size:0.75rem; margin-left:0.3rem;">inactive</span>
+                {% endif %}
+            </div>
+        </div>
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+            <span class="hud-user-role {{ user.role }}" style="font-size:0.7rem;">{{ user.role }}</span>
+            {% if user.last_login %}
+            <span style="opacity:0.3; font-size:0.75rem;">{{ user.last_login[:10] }}</span>
+            {% endif %}
+            <a href="{{ url_for('admin.user_edit', user_id=user.id) }}" style="font-size:0.8rem;">Edit</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

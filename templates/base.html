@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Standup 3000{% endblock %}</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <style>
+        :root {
+            --pico-font-size: 16px;
+
+            /* Design tokens */
+            --gradient-primary: linear-gradient(135deg, #6366f1, #a855f7);
+            --glass-bg: rgba(17, 17, 27, 0.85);
+            --glass-border: rgba(99, 102, 241, 0.15);
+            --glass-blur: 20px;
+            --accent-purple: #6366f1;
+            --accent-violet: #a855f7;
+            --accent-amber: #f59e0b;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --accent-blue: #3b82f6;
+            --glow-purple: 0 0 20px rgba(99, 102, 241, 0.15);
+            --glow-hover: inset 0 0 20px rgba(99, 102, 241, 0.08);
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --accent-border: rgba(99, 102, 241, 0.3);
+            --special-bg: rgba(251, 191, 36, 0.06);
+            --special-border: rgba(251, 191, 36, 0.25);
+            --badge-admin: var(--accent-purple);
+            --badge-member: rgba(255, 255, 255, 0.2);
+            --ui-volume: 0.3;
+        }
+        [data-theme="light"] {
+            --glass-bg: rgba(255, 255, 255, 0.88);
+            --glass-border: rgba(99, 102, 241, 0.12);
+            --glow-purple: 0 0 20px rgba(99, 102, 241, 0.08);
+            --glow-hover: inset 0 0 20px rgba(99, 102, 241, 0.05);
+            --accent-glow: rgba(99, 102, 241, 0.08);
+            --accent-border: rgba(99, 102, 241, 0.2);
+            --special-bg: rgba(251, 191, 36, 0.08);
+            --special-border: rgba(251, 191, 36, 0.3);
+            --badge-member: rgba(0, 0, 0, 0.1);
+        }
+
+        [style*="display:flex"] > button,
+        [style*="display:flex"] > [role="button"] { margin-bottom: 0; }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* === Nav Bar (glassmorphism) === */
+        body > nav {
+            flex-shrink: 0;
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 0.5rem 0;
+            z-index: 100;
+        }
+        body > nav .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        body > main {
+            flex: 1;
+            overflow-y: auto;
+        }
+        .brand {
+            font-weight: 800;
+            font-size: 1.3rem;
+            text-decoration: none;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        .nav-links a {
+            font-size: 0.9rem;
+            text-decoration: none;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .nav-links a:hover { opacity: 1; }
+
+        /* HUD Menu trigger */
+        .hud-trigger {
+            background: none;
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            width: 38px;
+            height: 38px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            padding: 0;
+            margin: 0;
+            color: var(--pico-color);
+        }
+        .hud-trigger:hover {
+            border-color: var(--accent-purple);
+            box-shadow: var(--glow-purple);
+        }
+
+        /* === HUD Menu Overlay === */
+        .hud-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 200;
+            animation: overlayIn 0.15s ease-out;
+        }
+        .hud-overlay.active { display: block; }
+        @keyframes overlayIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .hud-panel {
+            position: fixed;
+            top: 60px;
+            right: 1rem;
+            width: 280px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--glass-blur));
+            -webkit-backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            box-shadow: var(--glow-purple), 0 20px 60px rgba(0,0,0,0.3);
+            z-index: 201;
+            animation: hudSlideIn 0.15s ease-out;
+            overflow: hidden;
+        }
+        @keyframes hudSlideIn {
+            from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .hud-user-block {
+            padding: 1.25rem 1.25rem 1rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .hud-user-initials {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--gradient-primary);
+            color: white;
+            font-weight: 700;
+            font-size: 1rem;
+            margin-right: 0.75rem;
+            vertical-align: middle;
+        }
+        .hud-user-info {
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .hud-user-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: block;
+        }
+        .hud-user-role {
+            font-size: 0.7rem;
+            padding: 0.1rem 0.5rem;
+            border-radius: 1rem;
+            display: inline-block;
+            margin-top: 0.2rem;
+        }
+        .hud-user-role.admin {
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+        }
+        .hud-user-role.member {
+            background: var(--badge-member);
+            opacity: 0.6;
+        }
+        .hud-section {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .hud-section:last-child { border-bottom: none; }
+        .hud-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 1.25rem;
+            text-decoration: none;
+            color: var(--pico-color);
+            font-size: 0.9rem;
+            transition: background 0.1s, box-shadow 0.1s;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+        .hud-item:hover {
+            background: rgba(99, 102, 241, 0.06);
+            box-shadow: var(--glow-hover);
+        }
+        .hud-item .icon {
+            width: 1.2rem;
+            text-align: center;
+            opacity: 0.5;
+            font-size: 0.9rem;
+        }
+        .hud-item.danger { color: var(--accent-red); }
+        .hud-item.danger:hover { background: rgba(239, 68, 68, 0.06); }
+
+        /* Mobile nav */
+        .nav-links-mobile { display: none; }
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .nav-links-mobile { display: flex; }
+            .hud-panel {
+                right: 0.5rem;
+                left: 0.5rem;
+                width: auto;
+                top: 56px;
+            }
+        }
+
+        /* === Flash messages === */
+        .flash-message {
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+            animation: flashIn 0.3s ease;
+        }
+        .flash-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+        .flash-success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+        @keyframes flashIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* === Materialization animation === */
+        .materialize-nav {
+            animation: matSlideDown 0.15s ease-out both;
+        }
+        .materialize-content > * {
+            opacity: 0;
+            animation: matFadeUp 0.15s ease-out both;
+        }
+        .materialize-content > *:nth-child(1) { animation-delay: 0.15s; }
+        .materialize-content > *:nth-child(2) { animation-delay: 0.2s; }
+        .materialize-content > *:nth-child(3) { animation-delay: 0.25s; }
+        .materialize-content > *:nth-child(4) { animation-delay: 0.3s; }
+        .materialize-content > *:nth-child(5) { animation-delay: 0.35s; }
+        .materialize-content > *:nth-child(6) { animation-delay: 0.4s; }
+        .materialize-content > *:nth-child(7) { animation-delay: 0.45s; }
+        .materialize-content > *:nth-child(8) { animation-delay: 0.5s; }
+        .materialize-content > *:nth-child(9) { animation-delay: 0.55s; }
+        .materialize-content > *:nth-child(10) { animation-delay: 0.6s; }
+        .materialize-content > *:nth-child(n+11) { animation-delay: 0.65s; }
+        @keyframes matSlideDown {
+            from { opacity: 0; transform: translateY(-100%); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes matFadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* === Section cards === */
+        .meeting-layout {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 1.5rem;
+            align-items: start;
+        }
+        @media (max-width: 900px) {
+            .meeting-layout { grid-template-columns: 1fr; }
+        }
+        .meeting-date {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .sidebar { position: sticky; top: 0; }
+
+        .section-card {
+            border: 1px solid var(--pico-muted-border-color);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1rem;
+            transition: box-shadow 0.2s, border-color 0.2s;
+        }
+        .section-card:hover {
+            box-shadow: 0 4px 16px var(--accent-glow);
+            border-color: var(--accent-border);
+        }
+        .section-card.special {
+            background: var(--special-bg);
+            border-color: var(--special-border);
+        }
+        .section-card.special:hover {
+            box-shadow: 0 4px 16px rgba(251, 191, 36, 0.1);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        .section-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .section-header .reporter {
+            font-size: 0.8rem;
+            opacity: 0.5;
+            font-weight: 400;
+        }
+        .section-content {
+            min-height: 2rem;
+            cursor: pointer;
+        }
+        .section-content .empty {
+            color: var(--pico-muted-color);
+            font-style: italic;
+        }
+        .section-content :first-child { margin-top: 0; }
+        .section-content :last-child { margin-bottom: 0; }
+        .section-content.no-edit { cursor: default; }
+
+        /* Edit area */
+        .edit-area textarea {
+            min-height: 120px;
+            font-family: var(--pico-font-family);
+            font-size: 0.95rem;
+            border-radius: 8px;
+        }
+        .edit-area .btn-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .edit-area .btn-row button {
+            padding: 0.4rem 1rem;
+            font-size: 0.85rem;
+            border-radius: 8px;
+        }
+        .edit-area .hint {
+            font-size: 0.75rem;
+            opacity: 0.4;
+            margin-top: 0.25rem;
+        }
+
+        /* Meeting list */
+        .meeting-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--pico-muted-border-color);
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+            transition: box-shadow 0.2s, border-color 0.2s;
+        }
+        .meeting-list-item:hover {
+            box-shadow: 0 2px 12px var(--accent-glow);
+            border-color: var(--accent-border);
+        }
+        .fill-badge {
+            font-size: 0.8rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 1rem;
+            background: var(--pico-muted-border-color);
+        }
+        .fill-badge.full {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+        }
+
+        /* HTMX indicator */
+        .htmx-indicator {
+            display: none;
+            opacity: 0.5;
+            font-size: 0.8rem;
+        }
+        .htmx-request .htmx-indicator { display: inline; }
+
+        /* Todo styles */
+        .todo-list {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px dashed var(--pico-muted-border-color);
+        }
+        .todo-list-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            opacity: 0.4;
+            margin-bottom: 0.4rem;
+            font-weight: 600;
+        }
+        .todo-count {
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+            padding: 0.05rem 0.4rem;
+            border-radius: 1rem;
+            font-size: 0.65rem;
+            font-variant-numeric: tabular-nums;
+        }
+        .todo-badge {
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+            padding: 0.05rem 0.4rem;
+            border-radius: 1rem;
+            font-size: 0.7rem;
+            font-weight: 400;
+            vertical-align: middle;
+            margin-left: 0.3rem;
+        }
+        .todo-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.2rem 0;
+            font-size: 0.9rem;
+        }
+        .todo-item.done .todo-text {
+            text-decoration: line-through;
+            opacity: 0.35;
+        }
+        .todo-item input[type="checkbox"] {
+            margin: 0;
+            width: 1rem;
+            height: 1rem;
+            flex-shrink: 0;
+        }
+        .todo-text { flex: 1; }
+        .todo-delete {
+            background: none;
+            border: none;
+            color: var(--pico-muted-color);
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0 0.25rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+            line-height: 1;
+            margin: 0;
+            width: auto;
+        }
+        .todo-item:hover .todo-delete { opacity: 0.5; }
+        .todo-delete:hover { opacity: 1 !important; color: #ef4444; }
+        .todo-add { margin-top: 0.3rem; }
+        .todo-add input[type="text"] {
+            font-size: 0.85rem;
+            padding: 0.3rem 0.5rem;
+            border-radius: 6px;
+            width: 100%;
+            margin-bottom: 0;
+        }
+        .todo-add-row {
+            display: flex;
+            gap: 0.3rem;
+        }
+        .todo-add-extras {
+            display: flex;
+            gap: 0.3rem;
+            margin-top: 0.3rem;
+            flex-wrap: wrap;
+        }
+        .todo-field {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.4rem;
+            border-radius: 6px;
+            margin-bottom: 0;
+            flex: 1;
+            min-width: 0;
+        }
+        .todo-field select, .todo-field input {
+            margin-bottom: 0;
+        }
+
+        /* Priority indicators */
+        .priority-indicator {
+            font-weight: 700;
+            font-size: 0.75rem;
+            width: 1rem;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .priority-indicator.high { color: var(--accent-red); }
+        .priority-indicator.low { color: var(--pico-muted-color); opacity: 0.5; }
+
+        /* Assignee badge */
+        .todo-assignee {
+            font-size: 0.7rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 1rem;
+            background: rgba(99, 102, 241, 0.12);
+            color: #818cf8;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        /* Due date */
+        .todo-due {
+            font-size: 0.7rem;
+            opacity: 0.5;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .todo-due.overdue {
+            color: var(--accent-red);
+            opacity: 1;
+            font-weight: 600;
+        }
+
+        /* Overdue item highlight */
+        .todo-item.overdue {
+            border-left: 2px solid var(--accent-red);
+            padding-left: 0.4rem;
+        }
+
+        /* Carry forward button */
+        .todo-carry-forward {
+            background: none;
+            border: none;
+            color: var(--pico-muted-color);
+            cursor: pointer;
+            font-size: 0.85rem;
+            padding: 0 0.2rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+            line-height: 1;
+            margin: 0;
+            width: auto;
+        }
+        .todo-item:hover .todo-carry-forward { opacity: 0.4; }
+        .todo-carry-forward:hover { opacity: 1 !important; color: var(--accent-purple); }
+
+        /* Section tag (my todos page) */
+        .todo-section-tag {
+            font-size: 0.65rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            white-space: nowrap;
+            flex-shrink: 0;
+            opacity: 0.5;
+        }
+
+        /* Todo dashboard */
+        .todo-meeting-group { margin-bottom: 2rem; }
+        .todo-meeting-date {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--pico-muted-border-color);
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .todo-section-group { margin-bottom: 1rem; padding-left: 0.5rem; }
+        .todo-section-header { margin-bottom: 0.3rem; }
+        .todo-section-header .reporter {
+            font-size: 0.8rem;
+            opacity: 0.5;
+            margin-left: 0.5rem;
+        }
+        .todo-open-badge {
+            background: rgba(99, 102, 241, 0.15);
+            color: #818cf8;
+        }
+
+        /* Lock badge */
+        .lock-badge {
+            font-size: 0.85rem;
+            vertical-align: middle;
+        }
+        .locked-banner {
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.25);
+            color: var(--accent-amber);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Attendance */
+        .attendance-grid { margin-bottom: 0.5rem; }
+        .attendance-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+        }
+        .attendance-chip {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 1rem;
+            white-space: nowrap;
+        }
+        .attendance-chip.present {
+            background: rgba(34, 197, 94, 0.12);
+            color: var(--accent-green);
+        }
+        .attendance-chip.remote {
+            background: rgba(59, 130, 246, 0.12);
+            color: var(--accent-blue);
+        }
+        .attendance-chip.absent {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--accent-red);
+            opacity: 0.6;
+        }
+        .attendance-editor {
+            margin-top: 0.5rem;
+        }
+        .attendance-editor summary {
+            list-style: none;
+        }
+        .attendance-editor summary::-webkit-details-marker { display: none; }
+
+        @media print {
+            nav, .hud-trigger, .hud-overlay, .hud-panel { display: none !important; }
+            .section-card { break-inside: avoid; border: 1px solid #ccc; }
+            .meeting-layout { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body hx-headers='{"X-CSRF-Token": "{{ csrf_token() }}"}'>
+    <nav {% if fresh_login %}class="materialize-nav"{% endif %}>
+        <div class="container">
+            <ul style="list-style:none;margin:0;padding:0;">
+                <li><a href="/" class="brand">Standup 3000</a></li>
+            </ul>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('meetings_list') }}">Meetings</a></li>
+                <li><a href="{{ url_for('todos_dashboard') }}">Action Items</a></li>
+                <li><a href="{{ url_for('analytics_dashboard') }}">Analytics</a></li>
+                <li><a href="{{ url_for('search_page') }}" title="Search" style="font-size:1rem;">&#128269;</a></li>
+                <li>
+                    <button class="hud-trigger" onclick="toggleHUD()" title="Menu" id="hud-btn">&#9776;</button>
+                </li>
+            </ul>
+            <!-- Mobile: just brand + HUD trigger -->
+            <ul class="nav-links-mobile" style="list-style:none;margin:0;padding:0;gap:0.5rem;">
+                <li>
+                    <button class="hud-trigger" onclick="toggleHUD()" title="Menu" id="hud-btn-mobile">&#9776;</button>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- HUD Menu -->
+    <div class="hud-overlay" id="hudOverlay" onclick="closeHUD()"></div>
+    <div class="hud-panel" id="hudPanel" style="display:none;">
+        {% if current_user %}
+        <div class="hud-user-block">
+            <span class="hud-user-initials">{{ current_user.display_name[:2]|upper }}</span>
+            <div class="hud-user-info">
+                <span class="hud-user-name">{{ current_user.display_name }}</span>
+                <span class="hud-user-role {{ current_user.role }}">{{ current_user.role }}</span>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Mobile nav links -->
+        <div class="hud-section" style="display:none;" id="hudMobileNav">
+            <a href="{{ url_for('meetings_list') }}" class="hud-item">
+                <span class="icon">&#9635;</span> Meetings
+            </a>
+            <a href="{{ url_for('todos_dashboard') }}" class="hud-item">
+                <span class="icon">&#9745;</span> Action Items
+            </a>
+            <a href="{{ url_for('my_todos') }}" class="hud-item">
+                <span class="icon">&#9733;</span> My Items
+            </a>
+            <a href="{{ url_for('analytics_dashboard') }}" class="hud-item">
+                <span class="icon">&#9635;</span> Analytics
+            </a>
+            <a href="{{ url_for('search_page') }}" class="hud-item">
+                <span class="icon">&#128269;</span> Search
+            </a>
+        </div>
+
+        <div class="hud-section">
+            <a href="{{ url_for('meeting_new') }}" class="hud-item">
+                <span class="icon">+</span> New Meeting
+            </a>
+        </div>
+
+        {% if current_user and current_user.role == 'admin' %}
+        <div class="hud-section">
+            <a href="{{ url_for('admin.dashboard') }}" class="hud-item">
+                <span class="icon">&#9881;</span> Admin Panel
+            </a>
+        </div>
+        {% endif %}
+
+        <div class="hud-section">
+            <a href="{{ url_for('auth.change_password') }}" class="hud-item">
+                <span class="icon">&#128273;</span> Change Password
+            </a>
+            <button class="hud-item" onclick="toggleTheme()">
+                <span class="icon" id="theme-icon">&#9728;&#65039;</span> Toggle Theme
+            </button>
+        </div>
+
+        <div class="hud-section">
+            <form method="post" action="{{ url_for('auth.logout') }}" style="margin:0;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="hud-item danger">
+                    <span class="icon">&#9211;</span> Logout
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <main class="container {% if fresh_login %}materialize-content{% endif %}">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+        <div class="flash-message flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        // === Theme ===
+        function getTheme() {
+            return localStorage.getItem('standup3000-theme') || 'dark';
+        }
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('standup3000-theme', theme);
+            const icon = document.getElementById('theme-icon');
+            if (icon) icon.innerHTML = theme === 'dark' ? '&#9728;&#65039;' : '&#127769;';
+        }
+        function toggleTheme() {
+            setTheme(getTheme() === 'dark' ? 'light' : 'dark');
+            playSound('click-confirm');
+        }
+        setTheme(getTheme());
+
+        // === HUD Menu ===
+        let hudOpen = false;
+        function toggleHUD() {
+            hudOpen ? closeHUD() : openHUD();
+        }
+        function openHUD() {
+            document.getElementById('hudOverlay').classList.add('active');
+            document.getElementById('hudPanel').style.display = 'block';
+            // Show mobile nav links on mobile
+            if (window.innerWidth <= 768) {
+                document.getElementById('hudMobileNav').style.display = 'block';
+            }
+            hudOpen = true;
+            playSound('hud-open');
+        }
+        function closeHUD() {
+            document.getElementById('hudOverlay').classList.remove('active');
+            document.getElementById('hudPanel').style.display = 'none';
+            document.getElementById('hudMobileNav').style.display = 'none';
+            hudOpen = false;
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && hudOpen) closeHUD();
+        });
+
+        // === Sound System ===
+        const soundPool = {};
+        const soundsEnabled = {{ (app_settings.get('ui.sounds_enabled', 'on') == 'on')|tojson }};
+        const soundVolume = {{ app_settings.get('ui.sound_volume', '0.3') }};
+
+        function playSound(name) {
+            if (!soundsEnabled) return;
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            try {
+                if (!soundPool[name]) {
+                    soundPool[name] = new Audio('/static/sounds/' + name + '.wav');
+                }
+                const audio = soundPool[name].cloneNode();
+                audio.volume = soundVolume;
+                audio.play().catch(() => {});
+            } catch(e) {}
+        }
+
+        // === Todo extras toggle ===
+        document.addEventListener('focusin', function(e) {
+            if (e.target.matches('.todo-add input[name="text"]')) {
+                const extras = e.target.closest('.todo-add').querySelector('.todo-add-extras');
+                if (extras) extras.style.display = 'flex';
+            }
+        });
+
+        // === Materialization ===
+        (function() {
+            // Check for fresh login cookie
+            if (document.cookie.includes('_fresh_login=1')) {
+                // Cookie is consumed by after_request, animation classes already in HTML
+                playSound('login-granted');
+                // Clean up cookie
+                document.cookie = '_fresh_login=; max-age=0; path=/';
+            }
+        })();
+    </script>
+</body>
+</html>

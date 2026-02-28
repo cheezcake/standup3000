@@ -1,0 +1,62 @@
+{% extends "admin/layout.html" %}
+{% block title %}{% if mode == 'create' %}New Department{% else %}Edit Department{% endif %} — Admin — Standup 3000{% endblock %}
+{% block admin_content %}
+<h2>{% if mode == 'create' %}New Department{% else %}Edit {{ dept.name }}{% endif %}</h2>
+
+<form method="post" style="max-width:500px;">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label for="name">Department Name</label>
+    <input type="text" id="name" name="name"
+           value="{{ dept.name if mode == 'edit' else '' }}" required>
+
+    <label for="color">Color (optional, hex)</label>
+    <input type="color" id="color" name="color"
+           value="{{ dept.color or '#6366f1' if mode == 'edit' else '#6366f1' }}">
+
+    <label>
+        <input type="checkbox" name="is_special" value="1"
+               {% if mode == 'edit' and dept.is_special %}checked{% endif %}>
+        Special section (PTO/Shoutouts-type — shows in sidebar, no action items)
+    </label>
+
+    {% if mode == 'edit' %}
+    <label>
+        <input type="checkbox" name="is_archived" value="1"
+               {% if dept.is_archived %}checked{% endif %}>
+        Archived (hidden from new meetings)
+    </label>
+    {% endif %}
+
+    <label for="primary_reporter">Primary Reporter</label>
+    <select id="primary_reporter" name="primary_reporter">
+        <option value="">None</option>
+        {% for u in users %}
+        <option value="{{ u.id }}"
+                {% if mode == 'edit' and reporters %}
+                {% for r in reporters if r.is_primary and r.id == u.id %}selected{% endfor %}
+                {% endif %}>
+            {{ u.display_name }} (@{{ u.username }})
+        </option>
+        {% endfor %}
+    </select>
+
+    <label for="backup_reporters">Backup Reporters</label>
+    <select id="backup_reporters" name="backup_reporters" multiple size="4">
+        {% for u in users %}
+        <option value="{{ u.id }}"
+                {% if mode == 'edit' and reporters %}
+                {% for r in reporters if not r.is_primary and r.id == u.id %}selected{% endfor %}
+                {% endif %}>
+            {{ u.display_name }}
+        </option>
+        {% endfor %}
+    </select>
+    <small style="opacity:0.4;">Hold Ctrl/Cmd to select multiple</small>
+
+    <div style="display:flex; gap:0.5rem; margin-top:1rem; align-items:center;">
+        <button type="submit">{% if mode == 'create' %}Create Department{% else %}Save Changes{% endif %}</button>
+        <a href="{{ url_for('admin.departments_list') }}" role="button" class="outline secondary">Cancel</a>
+    </div>
+</form>
+{% endblock %}

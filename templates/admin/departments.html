@@ -1,0 +1,54 @@
+{% extends "admin/layout.html" %}
+{% block title %}Departments — Admin — Standup 3000{% endblock %}
+{% block admin_content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+    <h2 style="margin:0;">Departments</h2>
+    <a href="{{ url_for('admin.department_create') }}" role="button" class="outline" style="font-size:0.85rem; padding:0.4rem 1rem; border-radius:8px;">+ New Department</a>
+</div>
+
+<p style="opacity:0.4; font-size:0.8rem; margin-bottom:1rem;">Drag to reorder. Archived departments are hidden from new meetings.</p>
+
+<div id="dept-list">
+    {% for dept in departments %}
+    <div class="meeting-list-item" data-dept-id="{{ dept.id }}" style="cursor:grab; {% if dept.is_archived %}opacity:0.4;{% endif %}">
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+            <span style="opacity:0.3; cursor:grab;">&#9776;</span>
+            {% if dept.color %}
+            <span style="width:12px; height:12px; border-radius:3px; background:{{ dept.color }};"></span>
+            {% endif %}
+            <div>
+                <strong>{{ dept.name }}</strong>
+                {% if dept.is_special %}
+                <span style="font-size:0.7rem; opacity:0.4; margin-left:0.3rem;">special</span>
+                {% endif %}
+                {% if dept.is_archived %}
+                <span style="font-size:0.7rem; color:var(--accent-amber); margin-left:0.3rem;">archived</span>
+                {% endif %}
+            </div>
+        </div>
+        <a href="{{ url_for('admin.department_edit', dept_id=dept.id) }}" style="font-size:0.8rem;">Edit</a>
+    </div>
+    {% endfor %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+<script>
+    new Sortable(document.getElementById('dept-list'), {
+        animation: 150,
+        handle: '.meeting-list-item',
+        ghostClass: 'sortable-ghost',
+        onEnd: function() {
+            const order = Array.from(document.querySelectorAll('[data-dept-id]'))
+                .map(el => parseInt(el.dataset.deptId));
+            fetch('{{ url_for("admin.departments_reorder") }}', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({ order: order })
+            });
+        }
+    });
+</script>
+{% endblock %}

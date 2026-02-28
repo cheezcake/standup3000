@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Search — Standup 3000{% endblock %}
+{% block content %}
+<h2>Search</h2>
+
+<form method="get" action="{{ url_for('search_page') }}" style="margin-bottom:1.5rem;">
+    <div style="display:flex; gap:0.5rem;">
+        <input type="text" name="q" value="{{ query }}" placeholder="Search meetings, action items..."
+               autofocus style="margin-bottom:0;">
+        <button type="submit" style="white-space:nowrap;">Search</button>
+    </div>
+</form>
+
+{% if query %}
+<p style="font-size:0.85rem; opacity:0.5; margin-bottom:1rem;">{{ result_count }} result{{ 's' if result_count != 1 else '' }} for "{{ query }}"</p>
+
+{% if grouped %}
+{% for date, items in grouped.items() %}
+<div class="todo-meeting-group">
+    <h3 class="todo-meeting-date">{{ date }}</h3>
+    {% for item in items %}
+    <div style="padding:0.5rem 0.75rem; margin-bottom:0.3rem; border-left:2px solid {% if item.type == 'section' %}var(--accent-purple){% else %}var(--accent-blue){% endif %}; font-size:0.9rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
+            <strong>{{ item.section_name }}</strong>
+            <span style="font-size:0.7rem; padding:0.1rem 0.4rem; border-radius:1rem; background:{% if item.type == 'section' %}rgba(99,102,241,0.12){% else %}rgba(59,130,246,0.12){% endif %}; color:{% if item.type == 'section' %}#818cf8{% else %}#60a5fa{% endif %};">
+                {{ item.type }}
+            </span>
+        </div>
+        {% if item.reporter %}
+        <span style="font-size:0.75rem; opacity:0.4;">{{ item.reporter }}</span>
+        {% endif %}
+        <div style="margin-top:0.25rem; font-size:0.85rem;">{{ item.snippet | safe }}</div>
+    </div>
+    {% endfor %}
+</div>
+{% endfor %}
+{% else %}
+<p style="opacity:0.5; font-style:italic;">No results found.</p>
+{% endif %}
+{% endif %}
+{% endblock %}

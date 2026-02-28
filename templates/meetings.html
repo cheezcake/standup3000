@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}All Meetings — Standup 3000{% endblock %}
+{% block content %}
+<h2>All Meetings</h2>
+
+{% if meeting_info %}
+<div>
+    {% for info in meeting_info %}
+    <div class="meeting-list-item">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+            <a href="{{ url_for('meeting_view', meeting_id=info.meeting.id) }}">
+                <strong>{{ info.meeting.date }}</strong>
+            </a>
+            {% if info.meeting.status == 'locked' %}
+            <span class="lock-badge locked" title="Locked" style="font-size:0.75rem;">&#128274;</span>
+            {% endif %}
+        </div>
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+            {% if info.open_todos %}
+            <span class="fill-badge todo-open-badge">{{ info.open_todos }} action item{{ 's' if info.open_todos != 1 else '' }}</span>
+            {% endif %}
+            <span class="fill-badge {% if info.filled == info.total %}full{% endif %}">
+                {{ info.filled }}/{{ info.total }} sections
+            </span>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p>No meetings yet. <a href="{{ url_for('meeting_new') }}">Create one</a>.</p>
+{% endif %}
+{% endblock %}

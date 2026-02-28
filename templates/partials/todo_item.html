@@ -1,0 +1,26 @@
+<div class="todo-item {% if todo.done %}done{% endif %} {% if todo.due_date and todo.due_date < today and not todo.done %}overdue{% endif %} priority-{{ todo.priority or 'normal' }}" id="todo-{{ todo.id }}">
+    {% if todo.priority == 'high' %}<span class="priority-indicator high" title="High priority">!</span>{% endif %}
+    {% if todo.priority == 'low' %}<span class="priority-indicator low" title="Low priority">&darr;</span>{% endif %}
+    <input type="checkbox" {% if todo.done %}checked{% endif %}
+           hx-put="{{ url_for('todo_toggle', todo_id=todo.id) }}"
+           hx-target="#todo-{{ todo.id }}"
+           hx-swap="outerHTML">
+    <span class="todo-text">{{ todo.text }}</span>
+    {% if todo.assignee_name is defined and todo.assignee_name %}
+    <span class="todo-assignee" title="Assigned to {{ todo.assignee_name }}">{{ todo.assignee_name }}</span>
+    {% endif %}
+    {% if todo.due_date %}
+    <span class="todo-due {% if todo.due_date < today and not todo.done %}overdue{% endif %}" title="Due {{ todo.due_date }}">{{ todo.due_date }}</span>
+    {% endif %}
+    {% if not todo.done %}
+    <button class="todo-carry-forward" title="Move to latest meeting"
+            hx-post="{{ url_for('todo_carry_forward', todo_id=todo.id) }}"
+            hx-target="closest .todo-list"
+            hx-swap="outerHTML"
+            hx-confirm="Move this item to the latest meeting?">&raquo;</button>
+    {% endif %}
+    <button class="todo-delete"
+            hx-delete="{{ url_for('todo_delete', todo_id=todo.id) }}"
+            hx-target="#todo-{{ todo.id }}"
+            hx-swap="outerHTML">&times;</button>
+</div>

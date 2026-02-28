@@ -1,0 +1,24 @@
+<div class="edit-area">
+    <textarea name="content"
+              id="edit-{{ section.id }}"
+              hx-put="{{ url_for('section_save', section_id=section.id) }}"
+              hx-trigger="keydown[ctrlKey&&key=='Enter'] from:this"
+              hx-target="#section-{{ section.id }}"
+              hx-swap="outerHTML"
+              hx-indicator="closest .section-card .htmx-indicator"
+    >{{ section.content }}</textarea>
+    <div class="btn-row">
+        <button hx-put="{{ url_for('section_save', section_id=section.id) }}"
+                hx-include="#edit-{{ section.id }}"
+                hx-target="#section-{{ section.id }}"
+                hx-swap="outerHTML"
+                hx-indicator="closest .section-card .htmx-indicator"
+        >Save</button>
+        <button class="outline secondary"
+                hx-get="{{ url_for('section_view', section_id=section.id) }}"
+                hx-target="#section-{{ section.id }}"
+                hx-swap="outerHTML"
+        >Cancel</button>
+    </div>
+    <div class="hint">Markdown supported. Ctrl+Enter to save.</div>
+</div>

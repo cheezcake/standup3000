@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}My Action Items — Standup 3000{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+    <h2 style="margin:0;">My Action Items</h2>
+    <label style="font-size:0.85rem; display:flex; align-items:center; gap:0.3rem; margin:0;">
+        <input type="checkbox" id="show-done-toggle"
+               {% if show_done %}checked{% endif %}
+               onchange="window.location.href='{{ url_for('my_todos') }}' + (this.checked ? '?show_done=1' : '')"
+               style="margin:0; width:1rem; height:1rem;">
+        Show completed
+    </label>
+</div>
+
+{% if todos %}
+{% set ns = namespace(current_date='') %}
+{% for todo in todos %}
+    {% if todo.meeting_date != ns.current_date %}
+        {% if ns.current_date %}
+        </div>
+        {% endif %}
+        {% set ns.current_date = todo.meeting_date %}
+        <div class="todo-meeting-group">
+            <h3 class="todo-meeting-date">
+                <a href="{{ url_for('meeting_view', meeting_id=todo.meeting_id) }}">{{ todo.meeting_date }}</a>
+            </h3>
+    {% endif %}
+
+    <div class="todo-item {% if todo.done %}done{% endif %} {% if todo.due_date and todo.due_date < today and not todo.done %}overdue{% endif %} priority-{{ todo.priority or 'normal' }}" id="todo-{{ todo.id }}">
+        {% if todo.priority == 'high' %}<span class="priority-indicator high" title="High priority">!</span>{% endif %}
+        {% if todo.priority == 'low' %}<span class="priority-indicator low" title="Low priority">&darr;</span>{% endif %}
+        <input type="checkbox" {% if todo.done %}checked{% endif %}
+               hx-put="{{ url_for('todo_toggle', todo_id=todo.id) }}"
+               hx-target="#todo-{{ todo.id }}"
+               hx-swap="outerHTML">
+        <span class="todo-text">{{ todo.text }}</span>
+        <span class="todo-section-tag">{{ todo.section_name }}</span>
+        {% if todo.due_date %}
+        <span class="todo-due {% if todo.due_date < today and not todo.done %}overdue{% endif %}">{{ todo.due_date }}</span>
+        {% endif %}
+        <button class="todo-delete"
+                hx-delete="{{ url_for('todo_delete', todo_id=todo.id) }}"
+                hx-target="#todo-{{ todo.id }}"
+                hx-swap="outerHTML">&times;</button>
+    </div>
+{% endfor %}
+</div>
+{% else %}
+<p style="opacity:0.5; font-style:italic;">No action items assigned to you{% if not show_done %} (or all done!){% endif %}.</p>
+{% endif %}
+{% endblock %}

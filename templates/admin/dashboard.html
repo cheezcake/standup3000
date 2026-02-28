@@ -1,0 +1,24 @@
+{% extends "admin/layout.html" %}
+{% block title %}Admin — Standup 3000{% endblock %}
+{% block admin_content %}
+<h2>Admin Panel</h2>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-top:1rem;">
+    <a href="{{ url_for('admin.users_list') }}" class="section-card" style="text-decoration:none; text-align:center; padding:2rem;">
+        <div style="font-size:2rem; margin-bottom:0.5rem;">{{ user_count }}</div>
+        <div style="opacity:0.6; font-size:0.9rem;">Users</div>
+    </a>
+    <a href="{{ url_for('admin.departments_list') }}" class="section-card" style="text-decoration:none; text-align:center; padding:2rem;">
+        <div style="font-size:2rem; margin-bottom:0.5rem;">{{ dept_count }}</div>
+        <div style="opacity:0.6; font-size:0.9rem;">Departments</div>
+    </a>
+    <a href="{{ url_for('admin.templates_list') }}" class="section-card" style="text-decoration:none; text-align:center; padding:2rem;">
+        <div style="font-size:2rem; margin-bottom:0.5rem;">{{ template_count }}</div>
+        <div style="opacity:0.6; font-size:0.9rem;">Templates</div>
+    </a>
+    <a href="{{ url_for('admin.settings') }}" class="section-card" style="text-decoration:none; text-align:center; padding:2rem;">
+        <div style="font-size:2rem; margin-bottom:0.5rem;">&#9881;</div>
+        <div style="opacity:0.6; font-size:0.9rem;">Settings</div>
+    </a>
+</div>
+{% endblock %}

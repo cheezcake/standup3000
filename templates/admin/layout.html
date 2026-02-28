@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="margin-bottom:1rem; padding:0.6rem 0; border-bottom:1px solid var(--glass-border); display:flex; align-items:center; gap:1.5rem; flex-wrap:wrap;">
+    <a href="/" style="font-size:0.85rem; opacity:0.5; text-decoration:none;">&larr; Back to App</a>
+    <a href="{{ url_for('admin.users_list') }}" style="font-size:0.9rem; {% if request.path.startswith('/admin/users') %}border-bottom:2px solid var(--accent-purple); opacity:1;{% else %}opacity:0.6;{% endif %} text-decoration:none; padding-bottom:0.3rem;">Users</a>
+    <a href="{{ url_for('admin.departments_list') }}" style="font-size:0.9rem; {% if request.path.startswith('/admin/departments') or request.path == '/admin/departments' %}border-bottom:2px solid var(--accent-purple); opacity:1;{% else %}opacity:0.6;{% endif %} text-decoration:none; padding-bottom:0.3rem;">Departments</a>
+    <a href="{{ url_for('admin.templates_list') }}" style="font-size:0.9rem; {% if '/admin/templates' in request.path %}border-bottom:2px solid var(--accent-purple); opacity:1;{% else %}opacity:0.6;{% endif %} text-decoration:none; padding-bottom:0.3rem;">Templates</a>
+    <a href="{{ url_for('admin.settings') }}" style="font-size:0.9rem; {% if request.path == '/admin/settings' %}border-bottom:2px solid var(--accent-purple); opacity:1;{% else %}opacity:0.6;{% endif %} text-decoration:none; padding-bottom:0.3rem;">Settings</a>
+</div>
+{% block admin_content %}{% endblock %}
+{% endblock %}

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% if needs_setup %}Setup{% else %}Login{% endif %} — Standup 3000</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <style>
+        :root {
+            --gradient-primary: linear-gradient(135deg, #6366f1, #a855f7);
+            --glass-bg: rgba(17, 17, 27, 0.85);
+            --glass-border: rgba(99, 102, 241, 0.15);
+            --glass-blur: 20px;
+            --accent-purple: #6366f1;
+            --accent-violet: #a855f7;
+            --glow-purple: 0 0 30px rgba(99, 102, 241, 0.2);
+        }
+        * { box-sizing: border-box; }
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+        }
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0a0a0f;
+            perspective: 1200px;
+        }
+
+        /* === 3D Cube Field === */
+        .cube-field {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            overflow: hidden;
+            z-index: 0;
+        }
+        .cube-wrapper {
+            position: absolute;
+            transform-style: preserve-3d;
+            animation: cubeFloat linear infinite;
+        }
+        .cube {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: cubeSpin linear infinite;
+        }
+        .cube .face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 1px solid rgba(99, 102, 241, 0.12);
+            background: rgba(99, 102, 241, 0.02);
+            backface-visibility: visible;
+        }
+        .cube .front  { transform: translateZ(calc(var(--size) / 2)); }
+        .cube .back   { transform: rotateY(180deg) translateZ(calc(var(--size) / 2)); }
+        .cube .right  { transform: rotateY(90deg) translateZ(calc(var(--size) / 2)); }
+        .cube .left   { transform: rotateY(-90deg) translateZ(calc(var(--size) / 2)); }
+        .cube .top    { transform: rotateX(90deg) translateZ(calc(var(--size) / 2)); }
+        .cube .bottom { transform: rotateX(-90deg) translateZ(calc(var(--size) / 2)); }
+
+        @keyframes cubeSpin {
+            from { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+            to { transform: rotateX(360deg) rotateY(360deg) rotateZ(0deg); }
+        }
+        @keyframes cubeFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        /* === Login Card === */
+        .login-card {
+            position: relative;
+            z-index: 10;
+            width: 380px;
+            max-width: calc(100vw - 2rem);
+            padding: 2.5rem 2rem;
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--glass-blur));
+            -webkit-backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            box-shadow: var(--glow-purple);
+            animation: cardAppear 0.4s ease-out;
+        }
+        @keyframes cardAppear {
+            from { opacity: 0; transform: scale(0.95) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .login-brand {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .login-brand a {
+            font-weight: 800;
+            font-size: 1.8rem;
+            text-decoration: none;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .login-brand .subtitle {
+            display: block;
+            font-size: 0.85rem;
+            opacity: 0.4;
+            margin-top: 0.25rem;
+        }
+        .login-card input[type="text"],
+        .login-card input[type="password"] {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            font-size: 0.95rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            width: 100%;
+            margin-bottom: 0.75rem;
+        }
+        .login-card input:focus {
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+            outline: none;
+        }
+        .login-card button[type="submit"] {
+            width: 100%;
+            background: var(--gradient-primary);
+            border: none;
+            border-radius: 10px;
+            padding: 0.75rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: box-shadow 0.2s, transform 0.1s;
+            margin-top: 0.5rem;
+        }
+        .login-card button[type="submit"]:hover {
+            box-shadow: 0 0 24px rgba(99, 102, 241, 0.3);
+        }
+        .login-card button[type="submit"]:active {
+            transform: scale(0.98);
+        }
+        .flash-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+            animation: flashIn 0.3s ease;
+        }
+        .flash-success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+        @keyframes flashIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Parallax on cursor */
+        .cube-field.parallax {
+            transition: transform 0.1s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <!-- 3D Cube Background -->
+    <div class="cube-field" id="cubeField"></div>
+
+    <!-- Login Card -->
+    <div class="login-card" id="loginCard">
+        <div class="login-brand">
+            <a href="#">Standup 3000</a>
+            {% if needs_setup %}
+            <span class="subtitle">First-Time Setup</span>
+            {% endif %}
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+        <div class="flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endwith %}
+
+        <form method="post">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            {% if needs_setup %}
+                <input type="text" name="username" placeholder="Admin Username" autocomplete="username" required autofocus>
+                <input type="text" name="display_name" placeholder="Display Name" required>
+                <input type="password" name="password" placeholder="Password (8+ chars)" autocomplete="new-password" required>
+                <input type="password" name="confirm_password" placeholder="Confirm Password" autocomplete="new-password" required>
+                <button type="submit">Create Admin Account</button>
+            {% else %}
+                {% if request.args.get('next') %}
+                <input type="hidden" name="next" value="{{ request.args.get('next') }}">
+                {% endif %}
+                <input type="text" name="username" placeholder="Username" autocomplete="username" required autofocus>
+                <input type="password" name="password" placeholder="Password" autocomplete="current-password" required>
+                <button type="submit">Log In</button>
+            {% endif %}
+        </form>
+    </div>
+
+    <script>
+        // Generate cube field
+        const field = document.getElementById('cubeField');
+        const cubes = [
+            { size: 80,  x: 10, y: 15, speed: 25, floatSpeed: 8 },
+            { size: 120, x: 75, y: 20, speed: 35, floatSpeed: 10 },
+            { size: 60,  x: 30, y: 70, speed: 20, floatSpeed: 6 },
+            { size: 100, x: 85, y: 65, speed: 30, floatSpeed: 12 },
+            { size: 50,  x: 50, y: 10, speed: 22, floatSpeed: 7 },
+            { size: 90,  x: 15, y: 80, speed: 28, floatSpeed: 9 },
+            { size: 70,  x: 60, y: 45, speed: 32, floatSpeed: 11 },
+            { size: 110, x: 40, y: 85, speed: 26, floatSpeed: 8 },
+            { size: 55,  x: 90, y: 40, speed: 18, floatSpeed: 7 },
+            { size: 85,  x: 20, y: 50, speed: 24, floatSpeed: 10 },
+        ];
+
+        cubes.forEach((c, i) => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'cube-wrapper';
+            wrapper.style.cssText = `
+                left: ${c.x}%; top: ${c.y}%;
+                width: ${c.size}px; height: ${c.size}px;
+                --size: ${c.size}px;
+                animation-duration: ${c.floatSpeed}s;
+                animation-delay: ${-i * 0.7}s;
+            `;
+
+            const cube = document.createElement('div');
+            cube.className = 'cube';
+            cube.style.animationDuration = `${c.speed}s`;
+            cube.style.animationDelay = `${-i * 2}s`;
+
+            ['front','back','right','left','top','bottom'].forEach(face => {
+                const el = document.createElement('div');
+                el.className = `face ${face}`;
+                cube.appendChild(el);
+            });
+
+            wrapper.appendChild(cube);
+            field.appendChild(wrapper);
+        });
+
+        // Parallax cursor tracking (desktop only)
+        if (window.matchMedia('(pointer: fine)').matches) {
+            field.classList.add('parallax');
+            document.addEventListener('mousemove', (e) => {
+                const x = (e.clientX / window.innerWidth - 0.5) * 20;
+                const y = (e.clientY / window.innerHeight - 0.5) * 20;
+                field.style.transform = `rotateY(${x}deg) rotateX(${-y}deg)`;
+            });
+        }
+
+        // Sound effects (if available)
+        function playLoginSound(type) {
+            try {
+                const audio = new Audio(`/static/sounds/${type}.mp3`);
+                audio.volume = 0.3;
+                audio.play().catch(() => {});
+            } catch(e) {}
+        }
+
+        // Flash on form submit feedback
+        const form = document.querySelector('form');
+        form.addEventListener('submit', () => {
+            const btn = form.querySelector('button[type="submit"]');
+            btn.style.opacity = '0.7';
+            btn.textContent = 'Authenticating...';
+        });
+    </script>
+</body>
+</html>

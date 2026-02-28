@@ -1,0 +1,8 @@
+<div class="section-content"
+     id="section-{{ section.id }}"
+     hx-get="{{ url_for('section_edit', section_id=section.id) }}"
+     hx-trigger="click"
+     hx-swap="innerHTML"
+     hx-target="#section-{{ section.id }}">
+    {% include "partials/section_view_inner.html" %}
+</div>

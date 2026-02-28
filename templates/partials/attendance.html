@@ -1,0 +1,50 @@
+<div class="attendance-grid" id="attendance-grid">
+    {% if attendance %}
+    <div class="attendance-row">
+        {% for a in attendance %}
+        <span class="attendance-chip {{ a.status }}" title="{{ a.display_name }}: {{ a.status }}">
+            {{ a.display_name[:12] }}
+            {% if a.status == 'remote' %}<small>&#127760;</small>{% endif %}
+            {% if a.status == 'absent' %}<small>&#10005;</small>{% endif %}
+        </span>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if current_user and current_user.role == 'admin' %}
+    <details class="attendance-editor">
+        <summary style="font-size:0.75rem; cursor:pointer; opacity:0.5;">Manage attendance</summary>
+        <div class="attendance-edit-grid" style="margin-top:0.5rem;">
+            {% for u in users %}
+            <div class="attendance-edit-row" style="display:flex; align-items:center; gap:0.5rem; padding:0.2rem 0; font-size:0.85rem;">
+                <span style="width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ u.display_name }}</span>
+                <select style="font-size:0.75rem; padding:0.15rem 0.3rem; border-radius:6px; margin:0; width:auto;"
+                        onchange="updateAttendance({{ meeting.id }}, {{ u.id }}, this.value)">
+                    <option value="none" {% if u.id not in att_map %}selected{% endif %}>--</option>
+                    <option value="present" {% if att_map.get(u.id) == 'present' %}selected{% endif %}>Present</option>
+                    <option value="remote" {% if att_map.get(u.id) == 'remote' %}selected{% endif %}>Remote</option>
+                    <option value="absent" {% if att_map.get(u.id) == 'absent' %}selected{% endif %}>Absent</option>
+                </select>
+            </div>
+            {% endfor %}
+        </div>
+    </details>
+    {% endif %}
+</div>
+
+<script>
+function updateAttendance(meetingId, userId, status) {
+    fetch('/meeting/' + meetingId + '/attendance', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({user_id: userId, status: status})
+    })
+    .then(r => r.text())
+    .then(html => {
+        document.getElementById('attendance-panel').innerHTML = html;
+    });
+}
+</script>

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}New Meeting — Standup 3000{% endblock %}
+{% block content %}
+<h2>New Meeting</h2>
+<form method="post" action="{{ url_for('meeting_new') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <label for="date">Meeting Date</label>
+    <input type="date" id="date" name="date" value="{{ suggested_date }}" required>
+
+    <label for="source">Create from</label>
+    <select id="source" name="source" onchange="toggleSource(this.value)">
+        <option value="fresh">Start fresh (all departments)</option>
+        {% if templates %}
+        <option value="template">Use a template</option>
+        {% endif %}
+        {% if prev_meetings %}
+        <option value="copy">Copy from previous meeting</option>
+        {% endif %}
+    </select>
+
+    {% if templates %}
+    <div id="template-picker" style="display:none;">
+        <label for="template_id">Template</label>
+        <select id="template_id" name="template_id">
+            <option value="">Select a template...</option>
+            {% for t in templates %}
+            <option value="{{ t.id }}">{{ t.name }}{% if t.description %} — {{ t.description }}{% endif %}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+
+    {% if prev_meetings %}
+    <div id="copy-picker" style="display:none;">
+        <label for="copy_from">Copy content from</label>
+        <select id="copy_from" name="copy_from">
+            <option value="">Select a meeting...</option>
+            {% for m in prev_meetings %}
+            <option value="{{ m.date }}">{{ m.date }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+
+    <button type="submit">Create Meeting</button>
+</form>
+
+<script>
+function toggleSource(val) {
+    var tp = document.getElementById('template-picker');
+    var cp = document.getElementById('copy-picker');
+    if (tp) tp.style.display = val === 'template' ? 'block' : 'none';
+    if (cp) cp.style.display = val === 'copy' ? 'block' : 'none';
+    // Clear hidden selects so they don't submit
+    if (val !== 'template') { var t = document.getElementById('template_id'); if(t) t.value = ''; }
+    if (val !== 'copy') { var c = document.getElementById('copy_from'); if(c) c.value = ''; }
+}
+</script>
+{% endblock %}

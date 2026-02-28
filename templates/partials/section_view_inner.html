@@ -1,0 +1,5 @@
+{% if section.content %}
+{{ section.content | markdown | safe }}
+{% else %}
+<span class="empty">Click to add notes...</span>
+{% endif %}

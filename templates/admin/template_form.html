@@ -1,0 +1,39 @@
+{% extends "admin/layout.html" %}
+{% block title %}{{ 'Edit' if mode == 'edit' else 'New' }} Template — Admin — Standup 3000{% endblock %}
+{% block admin_content %}
+<h2>{{ 'Edit' if mode == 'edit' else 'New' }} Template</h2>
+
+<form method="post">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label for="name">Template Name</label>
+    <input type="text" id="name" name="name" required
+           value="{{ template.name if mode == 'edit' else '' }}"
+           placeholder="e.g., Weekly Standup">
+
+    <label for="description">Description (optional)</label>
+    <input type="text" id="description" name="description"
+           value="{{ template.description if mode == 'edit' else '' }}"
+           placeholder="Brief description of this template">
+
+    <fieldset>
+        <legend>Departments to include</legend>
+        <p style="font-size:0.8rem; opacity:0.5; margin-top:0;">Select which departments should be included in meetings created from this template. Order follows department sort order.</p>
+        {% for dept in departments %}
+        <label style="display:flex; align-items:center; gap:0.5rem; padding:0.2rem 0; margin-bottom:0; font-size:0.9rem;">
+            <input type="checkbox" name="departments" value="{{ dept.id }}"
+                   {% if mode == 'edit' and dept.id in selected_depts %}checked{% endif %}
+                   {% if mode == 'create' %}checked{% endif %}
+                   style="margin:0; width:1rem; height:1rem;">
+            {{ dept.name }}
+            {% if dept.is_special %}<span style="font-size:0.7rem; opacity:0.4;">(special)</span>{% endif %}
+        </label>
+        {% endfor %}
+    </fieldset>
+
+    <div style="display:flex; gap:0.5rem; margin-top:1rem; align-items:center;">
+        <button type="submit">{{ 'Save Changes' if mode == 'edit' else 'Create Template' }}</button>
+        <a href="{{ url_for('admin.templates_list') }}" role="button" class="outline">Cancel</a>
+    </div>
+</form>
+{% endblock %}

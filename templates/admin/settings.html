@@ -1,0 +1,63 @@
+{% extends "admin/layout.html" %}
+{% block title %}Settings — Admin — Standup 3000{% endblock %}
+{% block admin_content %}
+<h2>Settings</h2>
+
+<form method="post" style="max-width:600px;">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <h3 style="font-size:1.1rem; margin-top:1.5rem;">Presenter Mode</h3>
+
+    <label for="presenter.slide_sound">Slide Transition Sound</label>
+    <select id="presenter.slide_sound" name="presenter.slide_sound">
+        {% for opt in ['champagne', 'whoosh', 'chime', 'none'] %}
+        <option value="{{ opt }}" {% if settings.get('presenter.slide_sound') == opt %}selected{% endif %}>{{ opt|capitalize }}</option>
+        {% endfor %}
+    </select>
+
+    <label for="presenter.final_slide_sound">Final Slide Sound</label>
+    <select id="presenter.final_slide_sound" name="presenter.final_slide_sound">
+        {% for opt in ['airhorn', 'gong', 'champagne', 'none'] %}
+        <option value="{{ opt }}" {% if settings.get('presenter.final_slide_sound') == opt %}selected{% endif %}>{{ opt|capitalize }}</option>
+        {% endfor %}
+    </select>
+
+    <label for="presenter.confetti">Confetti</label>
+    <select id="presenter.confetti" name="presenter.confetti">
+        <option value="on" {% if settings.get('presenter.confetti') == 'on' %}selected{% endif %}>On</option>
+        <option value="off" {% if settings.get('presenter.confetti') == 'off' %}selected{% endif %}>Off</option>
+    </select>
+
+    <h3 style="font-size:1.1rem; margin-top:1.5rem;">UI Sounds</h3>
+
+    <label for="ui.sounds_enabled">UI Sound Effects</label>
+    <select id="ui.sounds_enabled" name="ui.sounds_enabled">
+        <option value="on" {% if settings.get('ui.sounds_enabled') == 'on' %}selected{% endif %}>On</option>
+        <option value="off" {% if settings.get('ui.sounds_enabled') == 'off' %}selected{% endif %}>Off</option>
+    </select>
+
+    <label for="ui.sound_volume">Sound Volume</label>
+    <input type="range" id="ui.sound_volume" name="ui.sound_volume"
+           min="0.1" max="1.0" step="0.1"
+           value="{{ settings.get('ui.sound_volume', '0.3') }}">
+    <small style="opacity:0.4;" id="volume-label">{{ settings.get('ui.sound_volume', '0.3') }}</small>
+
+    <h3 style="font-size:1.1rem; margin-top:1.5rem;">Markdown</h3>
+
+    <label for="markdown.escape">HTML Escaping in Markdown</label>
+    <select id="markdown.escape" name="markdown.escape">
+        <option value="true" {% if settings.get('markdown.escape') == 'true' %}selected{% endif %}>Escape HTML (safer)</option>
+        <option value="false" {% if settings.get('markdown.escape') == 'false' %}selected{% endif %}>Allow raw HTML (richer, trusted network only)</option>
+    </select>
+
+    <div style="margin-top:1.5rem;">
+        <button type="submit">Save Settings</button>
+    </div>
+</form>
+
+<script>
+    const slider = document.getElementById('ui.sound_volume');
+    const label = document.getElementById('volume-label');
+    slider.addEventListener('input', () => { label.textContent = slider.value; });
+</script>
+{% endblock %}
