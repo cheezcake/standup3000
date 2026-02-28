@@ -1,12 +1,16 @@
 # Standup 3000
 
 <p align="center">
-  <img src="logo.png" alt="Standup 3000" width="300">
+  <img src="images/logo.png" alt="Standup 3000" width="400">
 </p>
 
 A self-hosted web app for running recurring team standup meetings. Built for small-to-medium teams who want structured, department-by-department updates with presenter mode, action item tracking, analytics, and full-text search.
 
 No cloud dependencies. No subscriptions. One SQLite file.
+
+<p align="center">
+  <img src="images/screenshot.png" alt="Standup 3000 Screenshot" width="800">
+</p>
 
 ## Features
 
